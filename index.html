@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Magic Multiplication Circle</title>
+<style>
+  :root {
+    --void: #050608;
+    --panel: #0c0f14;
+    --line: #1c212c;
+    --line-bright: #2c3342;
+    --text: #e8ebf2;
+    --text-dim: #4a5268;
+    --cyan: #7ef9ff;
+    --cyan-dim: #143038;
+    --amber: #ffb86b;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--void);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow-x: hidden;
+    width: 100%;
+  }
+  .app {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 22px 14px 34px;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.22em;
+    margin: 0 0 2px;
+    color: var(--text-dim);
+    text-align: center;
+    text-transform: uppercase;
+  }
+  .subtitle {
+    font-family: 'Courier New', monospace;
+    font-size: 1.05rem;
+    color: var(--cyan);
+    margin-bottom: 20px;
+    text-align: center;
+    letter-spacing: 0.03em;
+  }
+
+  /* Presets rail — the hero interaction */
+  .presets {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+    max-width: 480px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    margin-bottom: 14px;
+    scrollbar-width: none;
+  }
+  .presets::-webkit-scrollbar { display: none; }
+  .preset-btn {
+    flex-shrink: 0;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    padding: 7px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.2s ease, border-color 0.2s ease, background-color 0.25s ease, box-shadow 0.25s ease, transform 0.15s ease;
+  }
+  .preset-btn:hover { color: var(--text); border-color: var(--line-bright); }
+  .preset-btn:active { transform: translateY(1px); }
+  .preset-btn.active {
+    color: var(--cyan);
+    border-color: var(--cyan);
+    background: var(--cyan-dim);
+    box-shadow: 0 0 14px -4px rgba(126,249,255,0.45);
+  }
+  .preset-btn .n { color: var(--amber); font-family: 'Courier New', monospace; }
+  .preset-btn.active .n { color: var(--amber); }
+
+  .canvas-wrap {
+    width: 100%;
+    max-width: 480px;
+    aspect-ratio: 1 / 1;
+    position: relative;
+    margin: 0 auto;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px var(--line),
+      0 0 80px -20px rgba(126,249,255,0.12),
+      0 30px 70px -30px rgba(0,0,0,0.8);
+  }
+  canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .progress {
+    display: flex;
+    justify-content: center;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px;
+    width: 100%;
+    max-width: 480px;
+    margin: 14px auto 0;
+    font-family: 'Courier New', monospace;
+    font-size: 0.74rem;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+    min-height: 1.2em;
+    letter-spacing: 0.02em;
+    text-align: center;
+  }
+  .progress .num { color: var(--cyan); }
+
+  /* Row of round action buttons under the canvas */
+  .action-row {
+    display: flex;
+    gap: 14px;
+    margin-top: 14px;
+    align-items: center;
+    justify-content: center;
+  }
+  .round-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--panel);
+    border: 1px solid var(--line-bright);
+    color: var(--text-dim);
+    font-size: 0.95rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .round-btn:hover { color: var(--text); }
+  .round-btn:active { transform: translateY(1px) scale(0.96); }
+  #playBtnMini {
+    width: 56px;
+    height: 56px;
+    color: var(--cyan);
+    font-size: 1.15rem;
+    box-shadow: 0 0 0 1px rgba(126,249,255,0.06) inset, 0 4px 20px -6px rgba(126,249,255,0.2);
+    transition: color 0.15s, border-color 0.15s, box-shadow 0.2s ease;
+  }
+  #playBtnMini.playing {
+    color: var(--amber);
+    box-shadow: 0 0 0 1px rgba(255,184,107,0.1) inset, 0 4px 20px -6px rgba(255,184,107,0.35);
+  }
+
+  .mode-toggle {
+    display: flex;
+    width: 100%;
+    max-width: 480px;
+    margin-top: 20px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 3px;
+    gap: 3px;
+  }
+  .mode-toggle button {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 8px 6px;
+    border-radius: 7px;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    transition: color 0.2s ease, background-color 0.2s ease;
+  }
+  .mode-toggle button.active {
+    background: var(--cyan-dim);
+    color: var(--cyan);
+  }
+
+  /* Console panel — quiet, dense, instrument-like */
+  .console {
+    width: 100%;
+    max-width: 480px;
+    margin-top: 10px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 4px 14px;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 76px 1fr 58px;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .row:last-child { border-bottom: none; }
+  .row label {
+    font-family: 'Courier New', monospace;
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    letter-spacing: 0.02em;
+  }
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 3px;
+    background: var(--line-bright);
+    border-radius: 2px;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 13px; height: 13px;
+    border-radius: 50%;
+    background: var(--cyan);
+    cursor: pointer;
+    box-shadow: 0 0 6px var(--cyan);
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 13px; height: 13px;
+    border-radius: 50%;
+    background: var(--cyan);
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 0 6px var(--cyan);
+  }
+  input[type="number"] {
+    width: 100%;
+    background: var(--void);
+    border: 1px solid var(--line);
+    color: var(--cyan);
+    font-family: 'Courier New', monospace;
+    font-size: 0.76rem;
+    font-variant-numeric: tabular-nums;
+    border-radius: 6px;
+    padding: 5px 4px;
+    text-align: center;
+    outline: none;
+    -moz-appearance: textfield;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"]:focus { border-color: var(--cyan); }
+
+  .row.colors { grid-template-columns: 76px 1fr 1fr; }
+  input[type="color"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 26px;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    cursor: pointer;
+    padding: 0;
+  }
+  input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  input[type="color"]::-webkit-color-swatch { border: 1px solid var(--line); border-radius: 6px; }
+
+  footer {
+    margin-top: 22px;
+    margin-bottom: 4px;
+    font-size: 0.66rem;
+    color: var(--text-dim);
+    text-align: center;
+    letter-spacing: 0.02em;
+    font-family: 'Courier New', monospace;
+  }
+
+  /* Keyboard accessibility */
+  button:focus-visible,
+  input:focus-visible {
+    outline: 2px solid var(--cyan);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+
+  @media (max-width: 420px) {
+    .row { grid-template-columns: 62px 1fr 50px; gap: 6px; }
+    .row.colors { grid-template-columns: 62px 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Magic Multiplication Circle</h1>
+  <div class="subtitle">Fariba wanted this</div>
+
+  <!-- Preset chips: classic modular multiplication patterns -->
+  <div class="presets" id="presets">
+    <button class="preset-btn" data-n="200" data-m="2">Cardioid <span class="n">M=2</span></button>
+    <button class="preset-btn" data-n="200" data-m="3">Nephroid <span class="n">M=3</span></button>
+    <button class="preset-btn" data-n="200" data-m="4">4-cusp <span class="n">M=4</span></button>
+    <button class="preset-btn" data-n="200" data-m="51">Star <span class="n">M=51</span></button>
+    <button class="preset-btn" data-n="397" data-m="100">Prime web <span class="n">N=397</span></button>
+    <button class="preset-btn" data-n="500" data-m="7">Rose <span class="n">M=7</span></button>
+  </div>
+
+  <div class="canvas-wrap">
+    <canvas id="canvas"></canvas>
+  </div>
+  <div class="progress" id="progress">
+    <span id="progressLabel">Ready —</span>
+    <span class="num" id="progressCurrent">0</span>
+    <span>/</span>
+    <span class="num" id="progressTotal">0</span>
+    <span>lines</span>
+  </div>
+
+  <div class="action-row">
+    <button id="resetBtn" class="round-btn" aria-label="Reset" title="Reset">↺</button>
+    <button id="playBtnMini" class="round-btn" aria-label="Play" title="Play / Pause">▶</button>
+  </div>
+
+  <div class="mode-toggle">
+    <button id="modeBlank" class="active">Animate</button>
+    <button id="modeFilled">Show all</button>
+  </div>
+
+  <div class="console">
+    <div class="row">
+      <label>N points</label>
+      <input type="range" id="nSlider" min="3" max="10000" step="1" value="200">
+      <input type="number" id="nInput" min="3" max="10000" value="200">
+    </div>
+    <div class="row">
+      <label>M mult</label>
+      <input type="range" id="mSlider" min="1" max="10000" step="1" value="2">
+      <input type="number" id="mInput" min="1" max="10000" value="2">
+    </div>
+    <div class="row">
+      <label>Width</label>
+      <input type="range" id="lwSlider" min="0.5" max="5" step="0.1" value="1">
+      <input type="number" id="lwInput" min="0.5" max="5" step="0.1" value="1">
+    </div>
+    <div class="row">
+      <label>Speed</label>
+      <input type="range" id="speedSlider" min="1" max="500" step="1" value="20">
+      <input type="number" id="speedInput" min="1" max="500" value="20">
+    </div>
+    <div class="row">
+      <label>Pace ms</label>
+      <input type="range" id="paceSlider" min="0" max="200" step="1" value="16">
+      <input type="number" id="paceInput" min="0" max="200" value="16">
+    </div>
+    <div class="row colors">
+      <label>Colors</label>
+      <input type="color" id="bgColor" value="#050608">
+      <input type="color" id="lineColor" value="#7ef9ff">
+    </div>
+  </div>
+
+  <footer>Magic Circle for Fariba</footer>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  // ---------------------------------------------------------------------
+  // DOM references
+  // ---------------------------------------------------------------------
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d', { alpha: false });
+  const canvasWrap = document.querySelector('.canvas-wrap');
+
+  const progressLabel = document.getElementById('progressLabel');
+  const progressCurrent = document.getElementById('progressCurrent');
+  const progressTotal = document.getElementById('progressTotal');
+
+  const nSlider = document.getElementById('nSlider');
+  const nInput = document.getElementById('nInput');
+  const mSlider = document.getElementById('mSlider');
+  const mInput = document.getElementById('mInput');
+  const lwSlider = document.getElementById('lwSlider');
+  const lwInput = document.getElementById('lwInput');
+  const speedSlider = document.getElementById('speedSlider');
+  const speedInput = document.getElementById('speedInput');
+  const paceSlider = document.getElementById('paceSlider');
+  const paceInput = document.getElementById('paceInput');
+  const bgColor = document.getElementById('bgColor');
+  const lineColor = document.getElementById('lineColor');
+
+  const playBtnMini = document.getElementById('playBtnMini');
+  const resetBtn = document.getElementById('resetBtn');
+  const modeBlank = document.getElementById('modeBlank');
+  const modeFilled = document.getElementById('modeFilled');
+  const presetsEl = document.getElementById('presets');
+
+  // ---------------------------------------------------------------------
+  // State
+  // ---------------------------------------------------------------------
+  let N = parseInt(nSlider.value, 10);
+  let M = parseInt(mSlider.value, 10);
+  let points = [];
+  let currentI = 0;
+  let isPlaying = false;
+  let animId = null;
+  let lastStepTime = 0;
+  let startBlank = true;
+  let dpr = 1;
+
+  // Adaptive performance controller: keeps the animation fluid by scaling
+  // the effective batch size down when frames run long, and easing it back
+  // up once the device is keeping pace again.
+  const FRAME_BUDGET_MS = 16.7; // ~60fps
+  let adaptiveScale = 1;
+
+  // Coalesce rapid style-only redraws (color/width dragging) into a single
+  // paint per animation frame so scrubbing a slider never queues up
+  // duplicate full-canvas redraws or fights with the play loop.
+  let restylePending = false;
+
+  // ---------------------------------------------------------------------
+  // Sizing & geometry
+  // ---------------------------------------------------------------------
+
+  // Cap device-pixel-ratio upscaling once the point count gets large — a
+  // 3x canvas at N=10,000 buys negligible visual fidelity but costs real
+  // fill-rate, especially on mobile GPUs.
+  function effectiveDpr() {
+    const raw = Math.max(1, window.devicePixelRatio || 1);
+    return N > 3000 ? Math.min(raw, 2) : raw;
+  }
+
+  function resizeCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width < 1 || rect.height < 1) return; // hidden/zero-size tab, skip
+
+    dpr = effectiveDpr();
+    const wasPlaying = isPlaying;
+    if (wasPlaying) stopAnimation();
+
+    canvas.width = Math.floor(rect.width * dpr);
+    canvas.height = Math.floor(rect.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    computePoints();
+    drawBackground();
+    // Preserve whatever progress existed before the resize/orientation
+    // change instead of blanking or re-animating from scratch.
+    if (currentI > 0) drawBatch(1, currentI);
+    updateProgress();
+    setButtonsState();
+
+    if (wasPlaying && currentI < N) startAnimation();
+  }
+
+  function computePoints() {
+    const rect = canvas.getBoundingClientRect();
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+    // min() of both dimensions keeps the circle true even if the container
+    // is ever not perfectly square (e.g. mid-orientation-change reflow).
+    const r = Math.min(rect.width, rect.height) / 2 - 4;
+    points = new Array(N);
+    for (let i = 0; i < N; i++) {
+      const a = (i / N) * Math.PI * 2 - Math.PI / 2;
+      points[i] = { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Rendering
+  // ---------------------------------------------------------------------
+  function drawBackground() {
+    const rect = canvas.getBoundingClientRect();
+    ctx.fillStyle = bgColor.value;
+    ctx.fillRect(0, 0, rect.width, rect.height);
+  }
+
+  function applyStrokeStyle() {
+    ctx.lineWidth = parseFloat(lwSlider.value);
+    ctx.strokeStyle = lineColor.value;
+    ctx.lineCap = 'round';
+    // Perf: shadow blur is a per-pixel cost — skip it once N gets large
+    // enough that thousands of glowing strokes would tank frame time.
+    if (N <= 1000) {
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = lineColor.value;
+    } else {
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  // Draws chords for i in [fromI, toI]: each chord runs from point(i-1) to
+  // point((i * M) mod N).
+  //
+  // Perf note: for i in [1, N], the start index (i-1) is always in
+  // [0, N-1] — i.e. it never needs to wrap — so unlike the destination
+  // index (which does wrap via % N), the start point can be walked forward
+  // with a plain incrementing array lookup instead of a modulo op *and* a
+  // separate function call every iteration. That removes one modulo and
+  // one call per line, roughly halving the per-iteration lookup cost.
+  function drawBatch(fromI, toI) {
+    if (!points.length || fromI > toI) return;
+    applyStrokeStyle();
+    ctx.beginPath();
+
+    let p1 = points[fromI - 1];
+    for (let i = fromI; i <= toI; i++) {
+      const p2 = points[(i * M) % N];
+      if (p1 && p2) {
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+      }
+      p1 = points[i]; // next iteration's start = points[(i+1)-1] = points[i]
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // Full repaint at the current progress point, used whenever a purely
+  // visual setting (width/colors) changes. Safe to call at any time,
+  // including mid-animation, since it only repaints what's already been
+  // drawn — the running step() loop keeps advancing currentI independently
+  // and simply picks up the new style on its next batch.
+  function restyleCurrentDrawing() {
+    drawBackground();
+    if (currentI >= 1) drawBatch(1, currentI);
+  }
+
+  function scheduleRestyle() {
+    if (restylePending) return;
+    restylePending = true;
+    requestAnimationFrame(() => {
+      restylePending = false;
+      restyleCurrentDrawing();
+    });
+  }
+
+  function updateProgress() {
+    progressCurrent.textContent = currentI.toLocaleString();
+    progressTotal.textContent = N.toLocaleString();
+    progressLabel.textContent = isPlaying ? 'Drawing:' :
+      (currentI >= N ? 'Complete —' : (currentI === 0 ? 'Ready —' : 'Paused —'));
+  }
+
+  function setButtonsState() {
+    if (isPlaying) {
+      playBtnMini.textContent = '⏸';
+      playBtnMini.classList.add('playing');
+      playBtnMini.setAttribute('aria-label', 'Pause');
+    } else {
+      playBtnMini.textContent = currentI >= N ? '↻' : '▶';
+      playBtnMini.classList.remove('playing');
+      playBtnMini.setAttribute('aria-label', 'Play');
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Animation loop
+  // ---------------------------------------------------------------------
+  function stopAnimation() {
+    isPlaying = false;
+    if (animId !== null) {
+      cancelAnimationFrame(animId);
+      animId = null;
+    }
+    setButtonsState();
+  }
+
+  function startAnimation() {
+    if (currentI >= N) {
+      currentI = 0;
+      drawBackground();
+    }
+    isPlaying = true;
+    adaptiveScale = 1;
+    setButtonsState();
+    lastStepTime = 0;
+    animId = requestAnimationFrame(step);
+  }
+
+  function step(ts) {
+    if (!isPlaying) return;
+
+    const pace = parseInt(paceSlider.value, 10);
+    if (lastStepTime && ts - lastStepTime < pace) {
+      animId = requestAnimationFrame(step);
+      return;
+    }
+
+    const frameStart = performance.now();
+
+    const userLinesPerStep = parseInt(speedSlider.value, 10);
+    const effectiveLinesPerStep = Math.max(1, Math.round(userLinesPerStep * adaptiveScale));
+    const from = currentI + 1;
+    const to = Math.min(N, currentI + effectiveLinesPerStep);
+    if (from <= to) {
+      drawBatch(from, to);
+      currentI = to;
+      updateProgress();
+    }
+    lastStepTime = ts;
+
+    // Smart throttling: if this batch took meaningfully longer than the
+    // frame budget, shrink the batch size so the next frame recovers.
+    // If frames are comfortably fast, ease the batch size back up toward
+    // whatever the user's speed slider requests. This keeps a "500 lines
+    // per step at N=10,000" setting fluid on slower/mobile GPUs without
+    // the user having to manually back off the slider.
+    const frameDuration = performance.now() - frameStart;
+    if (frameDuration > FRAME_BUDGET_MS * 1.5) {
+      adaptiveScale = Math.max(0.05, adaptiveScale * 0.7);
+    } else if (frameDuration < FRAME_BUDGET_MS * 0.5 && adaptiveScale < 1) {
+      adaptiveScale = Math.min(1, adaptiveScale * 1.1);
+    }
+
+    if (currentI >= N) {
+      isPlaying = false;
+      animId = null;
+      updateProgress();
+      setButtonsState();
+      return;
+    }
+    animId = requestAnimationFrame(step);
+  }
+
+  function renderForCurrentMode() {
+    stopAnimation();
+    drawBackground();
+    if (startBlank) {
+      currentI = 0;
+    } else {
+      if (N >= 1) drawBatch(1, N);
+      currentI = N;
+    }
+    updateProgress();
+    setButtonsState();
+  }
+
+  // ---------------------------------------------------------------------
+  // Slider <-> number-input sync
+  // ---------------------------------------------------------------------
+  function syncPair(slider, numberInput, min, max, onCommit = () => {}) {
+    slider.addEventListener('input', () => {
+      numberInput.value = slider.value;
+      onCommit(parseFloat(slider.value));
+    });
+    numberInput.addEventListener('change', () => {
+      let v = parseFloat(numberInput.value);
+      if (isNaN(v)) v = min;
+      v = Math.min(max, Math.max(min, v));
+      numberInput.value = v;
+      slider.value = v;
+      onCommit(v);
+    });
+  }
+
+  syncPair(nSlider, nInput, 3, 10000, (v) => {
+    N = Math.round(v);
+    computePoints();
+    renderForCurrentMode();
+    clearPresetHighlight();
+  });
+
+  syncPair(mSlider, mInput, 1, 10000, (v) => {
+    M = Math.round(v);
+    renderForCurrentMode();
+    clearPresetHighlight();
+  });
+
+  // Width/color changes repaint in place at the current progress point —
+  // this now runs regardless of play state, so dragging these controls
+  // mid-animation restyles smoothly instead of only taking effect once
+  // paused.
+  syncPair(lwSlider, lwInput, 0.5, 5, scheduleRestyle);
+  syncPair(speedSlider, speedInput, 1, 500);
+  syncPair(paceSlider, paceInput, 0, 200);
+
+  bgColor.addEventListener('input', scheduleRestyle);
+  lineColor.addEventListener('input', scheduleRestyle);
+
+  // ---------------------------------------------------------------------
+  // Buttons
+  // ---------------------------------------------------------------------
+  function togglePlay() {
+    if (isPlaying) {
+      stopAnimation();
+    } else {
+      startAnimation();
+    }
+  }
+  playBtnMini.addEventListener('click', togglePlay);
+
+  resetBtn.addEventListener('click', () => {
+    stopAnimation();
+    currentI = 0;
+    drawBackground();
+    updateProgress();
+    setButtonsState();
+  });
+
+  modeBlank.addEventListener('click', () => {
+    if (startBlank) return;
+    startBlank = true;
+    modeBlank.classList.add('active');
+    modeFilled.classList.remove('active');
+    renderForCurrentMode();
+  });
+
+  modeFilled.addEventListener('click', () => {
+    if (!startBlank) return;
+    startBlank = false;
+    modeFilled.classList.add('active');
+    modeBlank.classList.remove('active');
+    renderForCurrentMode();
+  });
+
+  // ---------------------------------------------------------------------
+  // Presets
+  // ---------------------------------------------------------------------
+  function clearPresetHighlight() {
+    presetsEl.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  }
+  presetsEl.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      N = parseInt(btn.dataset.n, 10);
+      M = parseInt(btn.dataset.m, 10);
+      nSlider.value = N; nInput.value = N;
+      mSlider.value = M; mInput.value = M;
+      computePoints();
+      renderForCurrentMode();
+      clearPresetHighlight();
+      btn.classList.add('active');
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // Resize handling — ResizeObserver covers layout-driven size changes
+  // (including orientation changes on mobile) more robustly than a bare
+  // window 'resize' listener, since it fires from the actual element's
+  // box rather than the viewport. Both are coalesced onto a single
+  // rAF-scheduled resize so rapid-fire events never queue up redundant
+  // recomputes.
+  // ---------------------------------------------------------------------
+  let resizeRAF = null;
+  function scheduleResize() {
+    if (resizeRAF !== null) return;
+    resizeRAF = requestAnimationFrame(() => {
+      resizeRAF = null;
+      resizeCanvas();
+    });
+  }
+
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(scheduleResize).observe(canvasWrap);
+  } else {
+    window.addEventListener('resize', scheduleResize);
+  }
+  window.addEventListener('orientationchange', scheduleResize);
+
+  // ---------------------------------------------------------------------
+  // Init
+  // ---------------------------------------------------------------------
+  resizeCanvas();
+})();
+</script>
+</body>
+</html>
